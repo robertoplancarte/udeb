@@ -1,0 +1,3 @@
+[submodule "repos/locke"]
+	path = repos/locke
+	url = git@github.com:robertoplancarte/locke.git
