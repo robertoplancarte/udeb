@@ -8,7 +8,7 @@ http://s3.localhost {
 }
 
 # Added by `neptuno add locke`
-http://locke.localhost, http://*.locke.localhost {
+http://locke.localhost, http://*.locke.localhost, http://acme.localhost, http://globex.localhost {
 	reverse_proxy locke:3000
 }
 
@@ -19,4 +19,10 @@ http://hook0.localhost {
 
 http://mailpit.localhost {
 	reverse_proxy mailpit:8025
+}
+
+# No http:// prefix: locke only accepts https issuers, so Caddy serves this
+# with a certificate from its local authority (see compose.yml).
+keycloak.localhost {
+	reverse_proxy keycloak:8080
 }

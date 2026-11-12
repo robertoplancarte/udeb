@@ -1,0 +1,22 @@
+{
+  "realm": "acme",
+  "displayName": "Acme Corp",
+  "enabled": true,
+  "users": [
+    {
+      "username": "alice@example.com", "email": "alice@example.com", "emailVerified": true,
+      "firstName": "Alice", "lastName": "Example", "enabled": true,
+      "credentials": [{ "type": "password", "value": "password", "temporary": false }]
+    },
+    {
+      "username": "bob@example.com", "email": "bob@example.com", "emailVerified": true,
+      "firstName": "Bob", "lastName": "Example", "enabled": true,
+      "credentials": [{ "type": "password", "value": "password", "temporary": false }]
+    },
+    {
+      "username": "erin@example.com", "email": "erin@example.com", "emailVerified": true,
+      "firstName": "Erin", "lastName": "Example", "enabled": true,
+      "credentials": [{ "type": "password", "value": "password", "temporary": false }]
+    }
+  ]
+}
