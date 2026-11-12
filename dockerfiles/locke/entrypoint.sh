@@ -7,10 +7,20 @@ setup() {
   [ -f Gemfile ] || return 0 # no app yet while `neptuno add` runs rails new
   # Gems live in the locke_bundle volume, so this only installs what
   # Gemfile.lock added since the last start.
+  trust_caddy_ca
   { bundle check >/dev/null || bundle install; } &&
     install_node_packages &&
     set_aside_old_database &&
     prepare_database && rm -f tmp/pids/server.pid || return 1
+}
+# Caddy's local certificate authority signs https://keycloak.localhost. Caddy
+# creates it when it first starts, so this waits for it a little on the first
+# start ever, and carries on without it if it never appears.
+trust_caddy_ca() {
+  root=/caddy/caddy/pki/authorities/local/root.crt
+  for _ in $(seq 1 15); do [ -f "$root" ] && break; sleep 1; done
+  [ -f "$root" ] || { echo "entrypoint.sh: no Caddy root certificate at $root; https://keycloak.localhost won't be trusted" >&2; return 0; }
+  cp "$root" /usr/local/share/ca-certificates/caddy-local.crt && update-ca-certificates >/dev/null
 }
 # npm packages, such as Playwright for the system specs, go in the repo's
 # node_modules, and Playwright's browsers in the locke_playwright volume.

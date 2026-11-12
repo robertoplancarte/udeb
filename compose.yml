@@ -7,10 +7,17 @@ name: ude
 services:
   proxy:
     image: caddy:2
-    ports: ["80:80"]
+    ports: ["80:80", "443:443"]
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy:/data
+    # Containers reach these at the same URLs as the browser: locke reaches
+    # Keycloak, so the issuer in its tokens matches, and Keycloak reaches
+    # locke's SCIM API on the tenants' hosts. *.localhost would otherwise be
+    # the container itself.
+    networks:
+      default:
+        aliases: [keycloak.localhost, acme.localhost, globex.localhost]
 
   # Postgres 18 because Hook0's migrations use uuidv7(). initdb/ runs only
   # when the volume is empty, and creates the hook0 database.
@@ -42,10 +49,30 @@ services:
   locke:
     build: dockerfiles/locke
     working_dir: /app
-    volumes: ["./repos/locke:/app", "./.neptuno/claude:/root/.claude", "locke_bundle:/usr/local/bundle", "locke_playwright:/root/.cache/ms-playwright"]
+    # caddy holds Caddy's local certificate authority, which entrypoint.sh
+    # trusts so locke can reach https://keycloak.localhost.
+    volumes: ["./repos/locke:/app", "./.neptuno/claude:/root/.claude", "locke_bundle:/usr/local/bundle", "locke_playwright:/root/.cache/ms-playwright", "caddy:/caddy:ro"]
     env_file: .neptuno/env/locke.env
     command: sleep infinity    # overmind execs the real processes
-    depends_on: [postgres, valkey, s3, proxy, hook0-api]
+    depends_on: [postgres, valkey, s3, proxy, hook0-api, keycloak]
+
+  # Keycloak at https://keycloak.localhost (admin/admin), standing in for the
+  # identity providers locke's tenants bring: one realm per tenant, imported
+  # from keycloak/realms on first start. locke's development seeds register
+  # locke as a client in each, and point the realm's SCIM provisioning
+  # (dockerfiles/keycloak) at locke. Realms persist in the keycloak volume;
+  # delete it to import them again.
+  keycloak:
+    build: dockerfiles/keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: https://keycloak.localhost
+      KC_PROXY_HEADERS: xforwarded
+    volumes:
+      - keycloak:/opt/keycloak/data
+      - ./keycloak/realms:/opt/keycloak/data/import:ro
 
   # Hook0 webhook server: an API, a worker that delivers the webhooks and a
   # dashboard at http://hook0.localhost (Caddy sends /api/ there to the API).
@@ -113,3 +140,4 @@ volumes:
   s3:
   locke_bundle:
   locke_playwright:
+  keycloak:
